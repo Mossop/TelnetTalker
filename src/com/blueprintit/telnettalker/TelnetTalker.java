@@ -50,12 +50,7 @@ public class TelnetTalker implements Runnable
 		{
 			String voiceName="kevin16";
 			
-	    SynthesizerModeDesc desc = new SynthesizerModeDesc(
-          null,          // engine name
-          "general",     // mode name
-          Locale.US,     // locale
-          null,          // running
-          null);         // voice
+	    SynthesizerModeDesc desc = new SynthesizerModeDesc(null,"general",Locale.US,null,null);
 	    Synthesizer synthesizer = Central.createSynthesizer(desc);
 	    if (synthesizer==null)
 	    {
