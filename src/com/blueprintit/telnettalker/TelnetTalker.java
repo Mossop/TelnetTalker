@@ -21,17 +21,19 @@ import java.util.Map;
  */
 public class TelnetTalker implements Runnable
 {
-	private BaseGUI gui;
+	//private BaseGUI gui;
 	private int localport = 6666;
 	private int port = 23;
 	private String server = "192.168.0.254";
 	private Selector selector;
 	private Map<SocketChannel,SocketChannel> channelMap;
+	private Map<SocketChannel,TextListener> listenerMap;
 	
 	public TelnetTalker()
 	{
 		//gui = new BaseGUI();
 		channelMap = new HashMap<SocketChannel,SocketChannel>();
+		listenerMap = new HashMap<SocketChannel,TextListener>();
 		(new Thread(this)).start();
 	}
 	
@@ -96,6 +98,11 @@ public class TelnetTalker implements Runnable
 									{
 										buffer.flip();
 										ochannel.write(buffer);
+										if (listenerMap.containsKey(channel))
+										{
+											buffer.rewind();
+											listenerMap.get(channel).write(buffer);
+										}
 									}
 									else if (count<0)
 									{
@@ -109,6 +116,8 @@ public class TelnetTalker implements Runnable
 												okey.cancel();
 											}
 										}
+										listenerMap.remove(channel);
+										listenerMap.remove(ochannel);
 										ochannel.close();
 										System.out.println("Disconnected");
 										break;
