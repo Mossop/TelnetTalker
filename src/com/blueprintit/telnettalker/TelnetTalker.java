@@ -113,9 +113,9 @@ public class TelnetTalker implements Runnable
 									TextLineListener tl = new TextLineListener();
 									listenerMap.put(osocket,tl);
 
-									tl.addLineListener(new RegexLineTalker(synthesizer,"\\*WIZ\\*.*: (.*)",1));
+									tl.addLineListener(new RegexLineTalker(synthesizer,"\\*WIZ\\*.*?: (.*)",1));
 									tl.addLineListener(new RegexLineTalker(synthesizer,"chats, \"(.*)\"",1));
-									tl.addLineListener(new RegexLineTalker(synthesizer,"\\*FIEND\\*.*: (.*)",1));
+									tl.addLineListener(new RegexLineTalker(synthesizer,"\\*FIEND\\*.*?: (.*)",1));
 									
 									socket.register(selector,SelectionKey.OP_READ);
 									osocket.register(selector,SelectionKey.OP_READ);
