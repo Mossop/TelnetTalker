@@ -14,7 +14,14 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
+
+import javax.speech.Central;
+import javax.speech.synthesis.Synthesizer;
+import javax.speech.synthesis.SynthesizerModeDesc;
+import javax.speech.synthesis.Voice;
 
 /**
  * @author Dave
@@ -23,8 +30,8 @@ public class TelnetTalker implements Runnable
 {
 	//private BaseGUI gui;
 	private int localport = 6666;
-	private int port = 23;
-	private String server = "192.168.0.254";
+	private int port = 6715;
+	private String server = "mud.atrocity.org";
 	private Selector selector;
 	private Map<SocketChannel,SocketChannel> channelMap;
 	private Map<SocketChannel,TextListener> listenerMap;
@@ -41,6 +48,39 @@ public class TelnetTalker implements Runnable
 	{
 		try
 		{
+			String voiceName="kevin16";
+			
+	    SynthesizerModeDesc desc = new SynthesizerModeDesc(
+          null,          // engine name
+          "general",     // mode name
+          Locale.US,     // locale
+          null,          // running
+          null);         // voice
+	    Synthesizer synthesizer = Central.createSynthesizer(desc);
+	    if (synthesizer==null)
+	    {
+	    	throw new Exception("Could not create synthesizer");
+	    }
+	    synthesizer.allocate();
+	    synthesizer.resume();
+
+      desc = (SynthesizerModeDesc) synthesizer.getEngineModeDesc();
+      Voice[] voices = desc.getVoices();
+      Voice voice = null;
+      for (int i = 0; i < voices.length; i++) {
+          if (voices[i].getName().equals(voiceName)) {
+              voice = voices[i];
+              break;
+          }
+      }
+      if (voice == null) {
+          System.err.println(
+              "Synthesizer does not have a voice named "
+              + voiceName + ".");
+          System.exit(1);
+      }
+      synthesizer.getSynthesizerProperties().setVoice(voice);
+      
 			ByteBuffer buffer = ByteBuffer.allocate(1024);
 			selector = Selector.open();
 			ServerSocketChannel listener = ServerSocketChannel.open();
@@ -51,8 +91,10 @@ public class TelnetTalker implements Runnable
 			{
 				if (selector.select()>0)
 				{
-					for (SelectionKey key : selector.selectedKeys())
+					Iterator<SelectionKey> keys = selector.selectedKeys().iterator();
+					while (keys.hasNext())
 					{
+						SelectionKey key = keys.next();
 						if (key.isAcceptable())
 						{
 							try
@@ -67,6 +109,14 @@ public class TelnetTalker implements Runnable
 									channelMap.put(osocket,socket);
 									socket.configureBlocking(false);
 									osocket.configureBlocking(false);
+									
+									TextLineListener tl = new TextLineListener();
+									listenerMap.put(osocket,tl);
+
+									tl.addLineListener(new RegexLineTalker(synthesizer,"\\*WIZ\\*.*: (.*)",1));
+									tl.addLineListener(new RegexLineTalker(synthesizer,"chats, \"(.*)\"",1));
+									tl.addLineListener(new RegexLineTalker(synthesizer,"\\*FIEND\\*.*: (.*)",1));
+									
 									socket.register(selector,SelectionKey.OP_READ);
 									osocket.register(selector,SelectionKey.OP_READ);
 									System.out.println("Connected");
@@ -75,7 +125,7 @@ public class TelnetTalker implements Runnable
 								{
 									System.out.println("Problem connecting");
 								}
-								selector.selectedKeys().remove(key);
+								keys.remove();
 							}
 							catch (IOException e)
 							{
@@ -124,7 +174,7 @@ public class TelnetTalker implements Runnable
 									}
 									count = channel.read(buffer);
 								}
-								selector.selectedKeys().remove(key);
+								keys.remove();
 							}
 							catch (IOException e)
 							{
@@ -135,9 +185,9 @@ public class TelnetTalker implements Runnable
 				}
 			}
 		}
-		catch (IOException e)
+		catch (Exception e)
 		{
-			System.err.println("Error creating selector");
+			System.err.println("Error creating selector or setting up synthesizer");
 			e.printStackTrace();
 		}
 	}
